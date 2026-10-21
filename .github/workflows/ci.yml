@@ -129,6 +129,8 @@ jobs:
           - runner: macos-26-intel
             target: x86_64-apple-darwin
     runs-on: ${{ matrix.runner }}
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
 
     steps:
     - uses: actions/checkout@v5
