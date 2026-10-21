@@ -556,7 +556,7 @@ There are 2 ways to build Moonlight Web:
   ```sh
   cross build --release --target YOUR_TARGET
   ```
-  Note: windows only has the gnu target `x86_64-pc-windows-gnu`
+  Note: windows only has the gnu target `x86_64-pc-windows-gnu`. macOS is built natively for `aarch64-apple-darwin` and `x86_64-apple-darwin`.
 
 ### Crate: Moonlight Web Server
 This is the web server for Moonlight Web found at `src/`.
