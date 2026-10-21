@@ -1,6 +1,9 @@
 use std::{
     collections::VecDeque,
-    sync::{Arc, Weak},
+    sync::{
+        Arc, Weak,
+        atomic::{AtomicBool, Ordering},
+    },
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -254,6 +257,7 @@ impl TrackLike for TrackLocalStaticSample {
 pub struct SequencedTrackLocalStaticRTP {
     track: Arc<TrackLocalStaticRTP>,
     sequence_number: Mutex<u16>,
+    logged_all_bindings_paused: AtomicBool,
 }
 
 impl From<TrackLocalStaticRTP> for SequencedTrackLocalStaticRTP {
@@ -261,6 +265,7 @@ impl From<TrackLocalStaticRTP> for SequencedTrackLocalStaticRTP {
         Self {
             track: Arc::new(value),
             sequence_number: Mutex::new(0),
+            logged_all_bindings_paused: AtomicBool::new(false),
         }
     }
 }
@@ -278,10 +283,25 @@ impl TrackLike for SequencedTrackLocalStaticRTP {
             self.track.all_binding_paused().await,
         );
 
-        if all_paused {
+        // `all_binding_paused` is `Iterator::all`, which is true when the binding
+        // list is empty. Chrome on Android can hit that after the first keyframe
+        // and then every later sample, including PLI keyframes, was discarded.
+        // Pause only when at least one binding exists and each one has sender_paused.
+        let bindings_paused = all_paused && any_paused;
+        if bindings_paused {
+            if !self
+                .logged_all_bindings_paused
+                .swap(true, Ordering::Relaxed)
+            {
+                warn!(
+                    "WebRTC: skipping RTP sample because every sender binding is paused (any_binding_paused={any_paused}, all_binding_paused={all_paused}, sender_paused=true)"
+                );
+            }
             // Abort already here to not increment sequence numbers.
             return Ok(());
         }
+        self.logged_all_bindings_paused
+            .store(false, Ordering::Relaxed);
         if any_paused {
             warn!("WebRTC: not all paused but any paused");
         }
