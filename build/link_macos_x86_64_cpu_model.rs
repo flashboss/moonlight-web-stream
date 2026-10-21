@@ -9,15 +9,17 @@ fn main() {
         return;
     }
 
-    let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+    let manifest_dir =
+        PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR is set by Cargo"));
     let source = manifest_dir.join(CPU_MODEL_C);
-    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR is set by Cargo"));
     let object = out_dir.join("macos_x86_64_cpu_model.o");
 
     println!("cargo:rerun-if-changed={}", source.display());
 
     let cc = env::var("CC").unwrap_or_else(|_| "cc".to_string());
-    let deployment_target = env::var("MACOSX_DEPLOYMENT_TARGET").unwrap_or_else(|_| "11.0".to_string());
+    let deployment_target =
+        env::var("MACOSX_DEPLOYMENT_TARGET").unwrap_or_else(|_| "11.0".to_string());
     let status = Command::new(cc)
         .arg("-target")
         .arg("x86_64-apple-darwin")
